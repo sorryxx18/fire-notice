@@ -40,9 +40,16 @@ button:disabled { opacity: .5; }
 .point ul { margin: 0; padding-left: 1.2em; }
 .remind { background: var(--yellow); border-radius: 10px; padding: 10px 12px; font-size: 15px; }
 .remind b { color: var(--red); }
-.padbox { position: relative; height: 170px; border: 2px dashed var(--navy); border-radius: 10px; background: #fff; overflow: hidden; }
-.padbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
-.padbox .hint { position: absolute; inset: 0; display: grid; place-items: center; color: #b3bcc6; pointer-events: none; font-size: 15px; }
+.padbox { display: grid; place-items: center; width: 100%; height: 130px; min-height: 0; padding: 6px; border: 2px dashed var(--navy); border-radius: 10px; background: #fff; color: var(--navy); font-size: 16px; }
+.padbox img { max-width: 100%; max-height: 114px; display: block; }
+/* 放大的簽名畫面：蓋滿整個螢幕 */
+#signModal { position: fixed; inset: 0; z-index: 8; background: #fff; display: none; flex-direction: column; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+#signModal.open { display: flex; }
+#signModal h2 { margin: 0 0 8px; text-align: center; }
+#signArea { position: relative; flex: 1; min-height: 0; border: 2px dashed var(--navy); border-radius: 12px; overflow: hidden; }
+#signArea canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+#signArea .hint { position: absolute; inset: 0; display: grid; place-items: center; color: #c3cad2; pointer-events: none; font-size: 20px; }
+#signArea .base { position: absolute; left: 6%; right: 6%; bottom: 26%; border-bottom: 2px solid #e1e6ec; pointer-events: none; }
 .sighead { display: flex; justify-content: space-between; align-items: center; margin: 0 0 6px; font-weight: 700; }
 .stampbox { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .stampview { width: 150px; height: 110px; border: 2px dashed var(--line); border-radius: 10px; display: grid; place-items: center; background: #fff; color: #b3bcc6; font-size: 14px; }
@@ -120,15 +127,15 @@ button:disabled { opacity: .5; }
   <section class="step" id="step3">
     <div class="card">
       <h2>宣導人員</h2>
-      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="1">清除</button></div>
-      <div class="padbox"><div class="hint" id="hint1">請在這裡簽名</div><canvas id="pad1"></canvas></div>
+      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="1" hidden>清除</button></div>
+      <button class="ghost padbox" data-sign="1" aria-label="宣導人員簽名，點一下放大簽名"></button>
     </div>
     <div class="card">
       <h2>場所人員</h2>
       <label>單位 <span>（可不填，預設帶入承造人／施工廠商）</span><input type="text" id="fUnit" autocomplete="off"></label>
       <label>職稱 <span>（可不填）</span><input type="text" id="fTitle" autocomplete="off"></label>
-      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="2">清除</button></div>
-      <div class="padbox"><div class="hint" id="hint2">請在這裡簽名</div><canvas id="pad2"></canvas></div>
+      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="2" hidden>清除</button></div>
+      <button class="ghost padbox" data-sign="2" aria-label="場所人員簽名，點一下放大簽名"></button>
       <div class="sighead" style="margin-top:14px"><span>場所章 <span style="font-weight:400;color:var(--muted);font-size:14px">（可不放）</span></span></div>
       <div class="stampbox">
         <div class="stampview" id="stampView">尚未選擇</div>
@@ -154,6 +161,12 @@ button:disabled { opacity: .5; }
     <p class="note" id="dlNote"></p>
   </section>
 </main>
+
+<div id="signModal" role="dialog" aria-modal="true" aria-labelledby="signTitle">
+  <h2 id="signTitle">簽名</h2>
+  <div id="signArea"><div class="base"></div><div class="hint" id="signHint">請在這裡簽名（手機橫放空間更大）</div><canvas id="signCanvas"></canvas></div>
+  <div class="row" style="margin-top:10px"><button class="ghost" id="signCancel">取消</button><button class="ghost" id="signClear">清除重簽</button><button id="signDone">完成</button></div>
+</div>
 
 <div id="loader">產生中，請稍候…</div>
 
@@ -209,10 +222,7 @@ $("#sRemind").innerHTML = `<b style="color:#c00000">提醒：</b>${esc(REMIND)}`
 function goStep(n) {
   document.querySelectorAll(".step").forEach((s) => s.classList.toggle("active", s.id === "step" + n));
   document.querySelectorAll(".steps li").forEach((l) => l.classList.toggle("on", l.dataset.s === String(n)));
-  if (n === 3) {
-    if (!$("#fUnit").value.trim()) $("#fUnit").value = $("#fMaker").value.trim();   // 場所人員的單位通常就是施工廠商，先帶入，可以改
-    requestAnimationFrame(() => { pad1.fit(); pad2.fit(); });
-  }
+  if (n === 3 && !$("#fUnit").value.trim()) $("#fUnit").value = $("#fMaker").value.trim();   // 場所人員的單位通常就是施工廠商，先帶入，可以改
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => goStep(Number(b.dataset.go))));
@@ -234,7 +244,7 @@ function makePad(canvas, hint) {
   let empty = true, last = null;
   function fit() {   // 簽名區顯示出來後才量得到大小；已經簽了就不重設，免得簽名被清掉
     const r = canvas.getBoundingClientRect(), k = Math.max(window.devicePixelRatio || 1, 1);
-    if (!r.width || !empty || canvas.width === Math.round(r.width * k)) return;
+    if (!r.width || !empty || (canvas.width === Math.round(r.width * k) && canvas.height === Math.round(r.height * k))) return;
     canvas.width = Math.round(r.width * k); canvas.height = Math.round(r.height * k);
     ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.lineWidth = 2.6; ctx.lineCap = ctx.lineJoin = "round"; ctx.strokeStyle = ctx.fillStyle = "#111";
@@ -269,8 +279,33 @@ function makePad(canvas, hint) {
     },
   };
 }
-const pad1 = makePad($("#pad1"), $("#hint1")), pad2 = makePad($("#pad2"), $("#hint2"));
-document.querySelectorAll("[data-clear]").forEach((b) => b.addEventListener("click", () => (b.dataset.clear === "1" ? pad1 : pad2).clear()));
+// 簽名一律點開放大簽：小框只顯示簽好的結果，點一下開全螢幕簽名畫面
+const sig = { 1: "", 2: "" };
+const SIGN_NAME = { 1: "宣導人員簽名", 2: "場所人員簽名" };
+const bigPad = makePad($("#signCanvas"), $("#signHint"));
+let signing = 0;
+function drawSig(n) {
+  $(`[data-sign="${n}"]`).innerHTML = sig[n] ? `<img src="${sig[n]}" alt="${SIGN_NAME[n]}">` : "點這裡放大簽名";
+  $(`[data-clear="${n}"]`).hidden = !sig[n];
+}
+function clearSig(n) { sig[n] = ""; drawSig(n); }
+function openSign(n) {
+  signing = n;
+  $("#signTitle").textContent = SIGN_NAME[n];
+  $("#signModal").classList.add("open"); document.body.style.overflow = "hidden";
+  bigPad.clear(); bigPad.fit();
+}
+function closeSign() {
+  $("#signModal").classList.remove("open"); document.body.style.overflow = "";
+  const b = $(`[data-sign="${signing}"]`); signing = 0; if (b) b.focus();
+}
+document.querySelectorAll("[data-sign]").forEach((b) => b.addEventListener("click", () => openSign(Number(b.dataset.sign))));
+document.querySelectorAll("[data-clear]").forEach((b) => b.addEventListener("click", () => clearSig(Number(b.dataset.clear))));
+$("#signCancel").addEventListener("click", closeSign);
+$("#signClear").addEventListener("click", () => { bigPad.clear(); bigPad.fit(); });
+$("#signDone").addEventListener("click", () => { const d = bigPad.data(); if (d) { sig[signing] = d; drawSig(signing); } closeSign(); });   // 沒有下筆就按完成，原本的簽名保留
+window.addEventListener("resize", () => { if (signing) bigPad.fit(); });   // 手機轉橫放時，還沒下筆就重新配合畫面大小
+drawSig(1); drawSig(2);
 
 // ---- 場所章：拍照或選照片；紅色印章自動去背並裁掉周圍 ----
 const stamp = { raw: "", cut: "" };
@@ -349,10 +384,10 @@ async function fillSheet() {
   $("#sAddr").textContent = $("#fAddr").value.trim();
   $("#sDate").textContent = $("#sDate2").textContent = rocDate($("#fDate").value);
   $("#sTitle").textContent = [$("#fUnit").value.trim(), $("#fTitle").value.trim()].filter(Boolean).join("\n");
-  const s2 = pad2.data(), st = stampData();
+  const s2 = sig[2], st = stampData();
   const both = !!(s2 && st);   // 簽名和章都有時各佔一半，只有一個時放大
   $("#sSiteCell").classList.toggle("solo", !both);
-  await Promise.all([place($("#sSig1"), pad1.data(), 208, 98), place($("#sSig2"), s2, both ? 98 : 208, 98), place($("#sStamp"), st, both ? 106 : 208, 104)]);
+  await Promise.all([place($("#sSig1"), sig[1], 208, 98), place($("#sSig2"), s2, both ? 98 : 208, 98), place($("#sStamp"), st, both ? 106 : 208, 104)]);
 }
 async function renderSheet() {
   await fillSheet();
@@ -392,7 +427,7 @@ $("#share").addEventListener("click", async () => {
 // 填下一張：清掉場所資料、場所人員簽名和場所章；宣導人員簽名和日期留著
 $("#again").addEventListener("click", () => {
   ["fName", "fMaker", "fAddr", "fUnit", "fTitle"].forEach((id) => { $("#" + id).value = ""; });
-  pad2.clear(); stamp.raw = stamp.cut = ""; drawStamp(); sheetCanvas = null;
+  clearSig(2); stamp.raw = stamp.cut = ""; drawStamp(); sheetCanvas = null;
   goStep(1);
 });
 
