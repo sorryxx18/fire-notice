@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>施工中場所火災預防宣導單</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root { --navy: #1f4e78; --yellow: #fff2cc; --light: #e9eff6; --red: #c00000; --ink: #1b1f24; --muted: #5b6672; --line: #c5ced8; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #f1f4f8; color: var(--ink); font: 17px/1.6 "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; -webkit-text-size-adjust: 100%; }
+header { background: var(--navy); color: #fff; padding: 14px 16px; text-align: center; }
+header .org { font-size: 14px; opacity: .9; }
+header h1 { margin: 2px 0 0; font-size: 21px; }
+main { max-width: 640px; margin: 0 auto; padding: 14px 14px 48px; }
+.steps { display: flex; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 14px; }
+.steps li { flex: 1; text-align: center; padding: 6px 2px; border-radius: 8px; background: #dfe6ee; color: var(--muted); }
+.steps li.on { background: var(--yellow); color: var(--ink); font-weight: 700; outline: 2px solid var(--navy); }
+.step { display: none; }
+.step.active { display: block; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 0 0 14px; }
+h2 { font-size: 19px; margin: 0 0 10px; color: var(--navy); }
+label { display: block; margin: 0 0 12px; font-weight: 700; }
+label span { font-weight: 400; color: var(--muted); font-size: 14px; }
+input[type="text"], input[type="date"] { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); min-height: 48px; }
+input:focus { outline: 3px solid #ffd966; border-color: var(--navy); }
+.row { display: flex; gap: 10px; margin-top: 4px; }
+button { font: inherit; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid var(--navy); background: var(--navy); color: #fff; cursor: pointer; flex: 1; }
+button.ghost { background: #fff; color: var(--navy); }
+button.small { min-height: 40px; flex: none; padding: 4px 14px; font-size: 15px; }
+button:disabled { opacity: .5; }
+.note { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.err { color: var(--red); font-weight: 700; margin: 0 0 10px; }
+.point { display: grid; grid-template-columns: 46px 1fr; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.point:first-of-type { border-top: none; }
+.point .no { width: 42px; height: 42px; border-radius: 50%; background: var(--red); color: #fff; font-size: 24px; font-weight: 700; display: grid; place-items: center; }
+.point h3 { margin: 4px 0 4px; font-size: 18px; }
+.point ul { margin: 0; padding-left: 1.2em; }
+.remind { background: var(--yellow); border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+.remind b { color: var(--red); }
+.padbox { position: relative; height: 170px; border: 2px dashed var(--navy); border-radius: 10px; background: #fff; overflow: hidden; }
+.padbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.padbox .hint { position: absolute; inset: 0; display: grid; place-items: center; color: #b3bcc6; pointer-events: none; font-size: 15px; }
+.sighead { display: flex; justify-content: space-between; align-items: center; margin: 0 0 6px; font-weight: 700; }
+.stampbox { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.stampview { width: 150px; height: 110px; border: 2px dashed var(--line); border-radius: 10px; display: grid; place-items: center; background: #fff; color: #b3bcc6; font-size: 14px; }
+.stampview img { max-width: 140px; max-height: 100px; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 8px 0 0; }
+.check input { width: 22px; height: 22px; }
+#previewImg { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; display: block; }
+#loader { position: fixed; inset: 0; background: rgba(255,255,255,.85); display: none; place-items: center; z-index: 9; font-size: 18px; color: var(--navy); }
+[hidden] { display: none !important; }
+
+/* ---- 要輸出成 PDF 的 A4 版面（放在畫面外，794×1123 = A4 直式） ---- */
+#sheetWrap { position: absolute; left: -10000px; top: 0; }
+#sheet { width: 794px; height: 1123px; padding: 46px 56px 0; background: #fff; color: #000; position: relative; font: 15px/1.5 "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+#sheet .org { text-align: center; font-size: 17px; font-weight: 700; }
+#sheet h1 { text-align: center; font-size: 31px; margin: 0 0 6px; color: var(--navy); letter-spacing: 1px; }
+#sheet p { margin: 0 0 9px; }
+#sheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+#sheet td, #sheet th { border: 1.2px solid #000; padding: 5px 8px; vertical-align: middle; }
+#sheet .lab { background: var(--light); font-weight: 700; text-align: center; font-size: 14.5px; padding: 5px 4px; }
+#sheet col.cl { width: 138px; }
+#sheet col.cs { width: 110px; }   /* 簽章表的標題欄窄一點，簽名和蓋章的格子才夠寬（各 231px） */
+#sheet .info td { height: 38px; }
+#sheet .points { margin-top: 10px; }
+#sheet .points th { background: var(--navy); color: #fff; font-size: 16.5px; padding: 5px; }
+#sheet .points .pt { background: var(--yellow); text-align: center; width: 172px; font-weight: 700; font-size: 16.5px; line-height: 1.3; }
+#sheet .points .pt b { display: block; color: var(--red); font-size: 27px; line-height: 1.15; }
+#sheet .points ul { margin: 0; padding: 0; list-style: none; }
+#sheet .points li { position: relative; padding: 2.5px 0 2.5px 16px; font-size: 15.5px; line-height: 1.45; }
+#sheet .points li::before { content: ""; position: absolute; left: 2px; top: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--navy); }
+#sheet .remind { background: none; padding: 0; margin: 10px 0; font-size: 14.5px; border-radius: 0; }
+#sheet .sign .ack { background: var(--light); font-weight: 700; text-align: center; font-size: 15.5px; height: 34px; }
+#sheet .sign .big { height: 152px; padding: 0; }
+#sheet .cell { position: relative; height: 150px; }
+#sheet .cell .unit { position: absolute; left: 8px; top: 5px; font-size: 13.5px; }
+#sheet .cell img { position: absolute; }
+#sheet .cell .sig { left: 10px; bottom: 8px; }
+#sheet .cell.site .sig { top: 50%; bottom: auto; transform: translateY(-50%); }
+#sheet .cell .stamp { right: 8px; top: 50%; transform: translateY(-50%); }
+#sheet .cell.solo .stamp { right: auto; left: 50%; transform: translate(-50%, -50%); }
+#sheet .foot { position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; font-size: 12.5px; color: #555; }
+</style>
+</head>
+<body>
+<header>
+  <div class="org">臺北市政府消防局第二救災救護大隊</div>
+  <h1>施工中場所火災預防宣導單</h1>
+</header>
+
+<main>
+  <ol class="steps" aria-label="步驟">
+    <li data-s="1">1 場所資料</li><li data-s="2">2 宣導內容</li><li data-s="3">3 簽名蓋章</li><li data-s="4">4 下載</li>
+  </ol>
+
+  <section class="step" id="step1">
+    <div class="card">
+      <h2>場所資料</h2>
+      <p class="err" id="err1" hidden></p>
+      <label>場所／工程名稱 <input type="text" id="fName" autocomplete="off"></label>
+      <label>承造人／施工廠商 <span>（可不填）</span><input type="text" id="fMaker" autocomplete="off"></label>
+      <label>場所地址 <span>（可不填）</span><input type="text" id="fAddr" autocomplete="off"></label>
+      <label>宣導日期 <input type="date" id="fDate"></label>
+    </div>
+    <div class="row"><button id="to2">下一步：宣導內容</button></div>
+  </section>
+
+  <section class="step" id="step2">
+    <div class="card">
+      <h2>五項防火重點</h2>
+      <p class="note">請向場所人員說明下列事項。</p>
+      <div id="pointList"></div>
+    </div>
+    <div class="remind" id="remindBox"></div>
+    <div class="row" style="margin-top:14px"><button class="ghost" data-go="1">上一步</button><button data-go="3">下一步：簽名蓋章</button></div>
+  </section>
+
+  <section class="step" id="step3">
+    <div class="card">
+      <h2>宣導人員</h2>
+      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="1">清除</button></div>
+      <div class="padbox"><div class="hint" id="hint1">請在這裡簽名</div><canvas id="pad1"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>場所人員</h2>
+      <label>職稱 <span>（可不填）</span><input type="text" id="fTitle" autocomplete="off"></label>
+      <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="2">清除</button></div>
+      <div class="padbox"><div class="hint" id="hint2">請在這裡簽名</div><canvas id="pad2"></canvas></div>
+      <div class="sighead" style="margin-top:14px"><span>場所章 <span style="font-weight:400;color:var(--muted);font-size:14px">（可不放）</span></span></div>
+      <div class="stampbox">
+        <div class="stampview" id="stampView">尚未選擇</div>
+        <div>
+          <div class="row" style="margin:0"><button class="ghost small" id="stampPick">拍照／選照片</button><button class="ghost small" id="stampDel" hidden>移除</button></div>
+          <label class="check" id="cutWrap" hidden><input type="checkbox" id="cutOn" checked> 自動去背（適合紅色印章）</label>
+          <p class="note" id="stampNote"></p>
+        </div>
+      </div>
+      <input type="file" id="stampFile" accept="image/*" hidden>
+    </div>
+    <p class="note">簽名和場所章都可以留白，下載後印出來再紙本簽名蓋章。</p>
+    <div class="row" style="margin-top:10px"><button class="ghost" data-go="2">上一步</button><button id="toPreview">預覽</button></div>
+  </section>
+
+  <section class="step" id="step4">
+    <div class="card">
+      <h2>預覽</h2>
+      <img id="previewImg" alt="宣導單預覽">
+    </div>
+    <div class="row"><button id="dl">下載 PDF</button><button id="share" class="ghost" hidden>分享 PDF</button></div>
+    <div class="row" style="margin-top:10px"><button class="ghost" data-go="3">返回修改</button><button class="ghost" id="again">填下一張</button></div>
+    <p class="note" id="dlNote"></p>
+  </section>
+</main>
+
+<div id="loader">產生中，請稍候…</div>
+
+<div id="sheetWrap" aria-hidden="true">
+  <div id="sheet">
+    <div class="org">臺北市政府消防局第二救災救護大隊</div>
+    <h1>施工中場所火災預防宣導單</h1>
+    <p>近年工地火災頻傳，常見原因為動火不慎、菸蒂未熄及電氣、充電問題。為維護施工人員及周邊民眾安全，請貴場所落實下列五項防火重點：</p>
+    <table class="info"><colgroup><col class="cl"><col><col class="cl"><col></colgroup>
+      <tr><td class="lab">場所／工程名稱</td><td id="sName"></td><td class="lab">承造人／施工廠商</td><td id="sMaker"></td></tr>
+      <tr><td class="lab">場所地址</td><td id="sAddr"></td><td class="lab">宣導日期</td><td id="sDate"></td></tr>
+    </table>
+    <table class="points"><thead><tr><th style="width:172px">防火重點</th><th>宣導事項</th></tr></thead><tbody id="sPoints"></tbody></table>
+    <p class="remind" id="sRemind"></p>
+    <table class="sign"><colgroup><col class="cs"><col><col class="cs"><col></colgroup>
+      <tr><td colspan="4" class="ack">本場所已收到本宣導單，並瞭解上述火災預防事項。</td></tr>
+      <tr>
+        <td class="lab">宣導單位<br>宣導人員</td>
+        <td class="big"><div class="cell"><div class="unit">臺北市政府消防局第二救災救護大隊</div><img class="sig" id="sSig1" alt=""></div></td>
+        <td class="lab">場所人員<br>簽名／蓋章</td>
+        <td class="big"><div class="cell site" id="sSiteCell"><img class="sig" id="sSig2" alt=""><img class="stamp" id="sStamp" alt=""></div></td>
+      </tr>
+      <tr><td class="lab">場所人員職稱</td><td id="sTitle" style="height:38px"></td><td class="lab">日期</td><td id="sDate2"></td></tr>
+    </table>
+    <div class="foot">工地防火，從細節做起｜臺北市政府消防局第二救災救護大隊</div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// 宣導內容：畫面上的第 2 步和 PDF 版面共用這一份
+const POINTS = [
+  ["動火要監看", ["焊接、切割等動火作業，指定專人在旁監看，並備妥滅火器材。", "作業前移除或隔離周邊可燃物，必要時鋪設防焰帆布（墊）。", "視作業條件採取灑水、降溫等防止火花延燒措施；作業後確認沒有殘火。"]],
+  ["菸蒂要熄滅", ["作業區禁菸，規劃指定吸菸區及熄菸設施。", "菸蒂確實熄滅；垃圾、廢棄物及包裝材每日清理。"]],
+  ["可燃物遠離火源", ["油漆、溶劑、木材、包裝材等分類集中存放，並遠離火源。", "高壓氣體、瓦斯鋼瓶妥善存放、固定及管理。"]],
+  ["收工巡查\n高風險區加強巡查", ["下班或停工前，確認火源、用電、機具及充電設備，清除遺留火種。", "地下室、管道間、屋頂、停車空間，以及夜間、無人時段加強巡查。", "安全梯、走廊、出口及消防搶救動線保持暢通。"]],
+  ["鋰電池充電要管理", ["使用原廠或合格的電池及充電設備，設置專用且通風良好的充電區。", "充電區遠離可燃物、避免過度充電；充電期間有人看顧。", "電池膨脹、有異味、異常發熱或損壞時，立即停止使用。"]],
+];
+const REMIND = "依法應辦理施工中消防防護計畫者，請完成提報或變更，並建立緊急通報、人員清點及初期滅火機制。火災請撥 119。";
+
+$("#pointList").innerHTML = POINTS.map(([t, items], i) => `<div class="point"><div class="no">${i + 1}</div><div><h3>${esc(t.replace("\n", "・"))}</h3><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`).join("");
+$("#remindBox").innerHTML = `<b>提醒：</b>${esc(REMIND)}`;
+$("#sPoints").innerHTML = POINTS.map(([t, items], i) => `<tr><td class="pt"><b>${i + 1}</b>${esc(t).replace("\n", "<br>")}</td><td><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></td></tr>`).join("");
+$("#sRemind").innerHTML = `<b style="color:#c00000">提醒：</b>${esc(REMIND)}`;
+
+// ---- 步驟切換 ----
+function goStep(n) {
+  document.querySelectorAll(".step").forEach((s) => s.classList.toggle("active", s.id === "step" + n));
+  document.querySelectorAll(".steps li").forEach((l) => l.classList.toggle("on", l.dataset.s === String(n)));
+  if (n === 3) requestAnimationFrame(() => { pad1.fit(); pad2.fit(); });
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => goStep(Number(b.dataset.go))));
+$("#to2").addEventListener("click", () => {
+  const miss = !$("#fName").value.trim() ? "請填場所／工程名稱。" : !$("#fDate").value ? "請選宣導日期。" : "";
+  $("#err1").textContent = miss; $("#err1").hidden = !miss;
+  if (miss) { (!$("#fName").value.trim() ? $("#fName") : $("#fDate")).focus(); return; }
+  goStep(2);
+});
+
+// 日期預設今天（台北時間）
+const todayTW = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
+$("#fDate").value = todayTW();
+const rocDate = (v) => { const [y, m, d] = v.split("-").map(Number); return `民國 ${y - 1911} 年 ${m} 月 ${d} 日`; };
+
+// ---- 手寫簽名 ----
+function makePad(canvas, hint) {
+  const ctx = canvas.getContext("2d");
+  let empty = true, last = null;
+  function fit() {   // 簽名區顯示出來後才量得到大小；已經簽了就不重設，免得簽名被清掉
+    const r = canvas.getBoundingClientRect(), k = Math.max(window.devicePixelRatio || 1, 1);
+    if (!r.width || !empty || canvas.width === Math.round(r.width * k)) return;
+    canvas.width = Math.round(r.width * k); canvas.height = Math.round(r.height * k);
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.lineWidth = 2.6; ctx.lineCap = ctx.lineJoin = "round"; ctx.strokeStyle = ctx.fillStyle = "#111";
+  }
+  const pos = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); canvas.setPointerCapture(e.pointerId);
+    last = pos(e); empty = false; hint.hidden = true;
+    ctx.beginPath(); ctx.arc(last.x, last.y, 1.3, 0, Math.PI * 2); ctx.fill();
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!last) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+  });
+  ["pointerup", "pointercancel"].forEach((t) => canvas.addEventListener(t, () => { last = null; }));
+  return {
+    fit,
+    clear() { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore(); empty = true; hint.hidden = false; },
+    data() {   // 只取有筆跡的範圍，放進簽名欄才不會縮得太小
+      if (empty) return "";
+      const w = canvas.width, h = canvas.height, px = ctx.getImageData(0, 0, w, h).data;
+      let x0 = w, y0 = h, x1 = 0, y1 = 0;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < x0) return "";
+      const m = 6; x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+      const o = document.createElement("canvas"); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+      o.getContext("2d").drawImage(canvas, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+      return o.toDataURL("image/png");
+    },
+  };
+}
+const pad1 = makePad($("#pad1"), $("#hint1")), pad2 = makePad($("#pad2"), $("#hint2"));
+document.querySelectorAll("[data-clear]").forEach((b) => b.addEventListener("click", () => (b.dataset.clear === "1" ? pad1 : pad2).clear()));
+
+// ---- 場所章：拍照或選照片；紅色印章自動去背並裁掉周圍 ----
+const stamp = { raw: "", cut: "" };
+function readImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("讀不到這張照片")); };
+    img.src = url;
+  });
+}
+function processStamp(img) {
+  const k = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const raw = c.toDataURL("image/jpeg", 0.85);
+  // 去背：印泥顏色鮮豔（飽和度高），紙張和黑字飽和度低，低的變透明
+  const d = ctx.getImageData(0, 0, w, h), px = d.data;
+  let n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    const mx = Math.max(px[i], px[i + 1], px[i + 2]), mn = Math.min(px[i], px[i + 1], px[i + 2]);
+    const sat = mx ? (mx - mn) / mx : 0;
+    const a = mx < 60 ? 0 : Math.max(0, Math.min(1, (sat - 0.2) / 0.15));
+    px[i + 3] = Math.round(a * 255);
+    if (a > 0.5) { n++; const x = (i / 4) % w, y = Math.floor(i / 4 / w); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  let cut = "";
+  if (n > w * h * 0.003) {   // 鮮豔的部分太少，就當作沒有偵測到印章
+    ctx.putImageData(d, 0, 0);
+    const pad = 8; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+    const o = document.createElement("canvas"); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+    o.getContext("2d").drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+    cut = o.toDataURL("image/png");
+  }
+  return { raw, cut };
+}
+const stampData = () => (stamp.cut && $("#cutOn").checked ? stamp.cut : stamp.raw);
+function drawStamp() {
+  const has = !!stamp.raw;
+  $("#stampView").innerHTML = has ? `<img src="${stampData()}" alt="場所章">` : "尚未選擇";
+  $("#stampDel").hidden = !has;
+  $("#cutWrap").hidden = !stamp.cut;
+  $("#stampNote").textContent = has && !stamp.cut ? "沒有偵測到紅色印章，直接用原本的照片。拍照時讓印章佔滿畫面、光線充足效果比較好。" : "";
+}
+$("#stampPick").addEventListener("click", () => $("#stampFile").click());
+$("#stampFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { Object.assign(stamp, processStamp(await readImage(f))); $("#cutOn").checked = true; }
+  catch (err) { stamp.raw = stamp.cut = ""; $("#stampNote").textContent = "這張照片讀不到，請換一張或重拍。"; $("#stampView").textContent = "尚未選擇"; $("#stampDel").hidden = true; $("#cutWrap").hidden = true; return; }
+  drawStamp();
+});
+$("#cutOn").addEventListener("change", drawStamp);
+$("#stampDel").addEventListener("click", () => { stamp.raw = stamp.cut = ""; drawStamp(); });
+
+// ---- 填入 A4 版面、產生預覽與 PDF ----
+let sheetCanvas = null;
+// 把圖放進簽章欄：等圖載入後，依原圖比例算出不超過欄位的寬高（直接寫死像素，輸出才不會超出格子）
+function place(el, src, maxW, maxH) {
+  return new Promise((res) => {
+    if (!src) { el.hidden = true; el.removeAttribute("src"); return res(); }
+    el.onload = () => {
+      const k = Math.min(maxW / el.naturalWidth, maxH / el.naturalHeight);
+      el.style.width = Math.round(el.naturalWidth * k) + "px"; el.style.height = Math.round(el.naturalHeight * k) + "px";
+      res();
+    };
+    el.onerror = () => { el.hidden = true; res(); };
+    el.hidden = false; el.src = src;
+  });
+}
+async function fillSheet() {
+  $("#sName").textContent = $("#fName").value.trim();
+  $("#sMaker").textContent = $("#fMaker").value.trim();
+  $("#sAddr").textContent = $("#fAddr").value.trim();
+  $("#sDate").textContent = $("#sDate2").textContent = rocDate($("#fDate").value);
+  $("#sTitle").textContent = $("#fTitle").value.trim();
+  const s2 = pad2.data(), st = stampData();
+  const both = !!(s2 && st);   // 簽名和章都有時各佔一半，只有一個時放大
+  $("#sSiteCell").classList.toggle("solo", !both);
+  await Promise.all([place($("#sSig1"), pad1.data(), 208, 100), place($("#sSig2"), s2, both ? 98 : 208, 128), place($("#sStamp"), st, both ? 110 : 208, 134)]);
+}
+async function renderSheet() {
+  await fillSheet();
+  return html2canvas($("#sheet"), { scale: 2.5, backgroundColor: "#ffffff", width: 794, height: 1123, windowWidth: 1000 });
+}
+const busy = (on) => { $("#loader").style.display = on ? "grid" : "none"; };
+$("#toPreview").addEventListener("click", async () => {
+  busy(true);
+  try {
+    sheetCanvas = await renderSheet();
+    $("#previewImg").src = sheetCanvas.toDataURL("image/jpeg", 0.85);
+    $("#dlNote").textContent = "";
+    goStep(4);
+  } catch (e) { alert("預覽產生失敗，請再按一次。\n（" + e.message + "）"); }
+  finally { busy(false); }
+});
+function buildPdf() {
+  const pdf = new window.jspdf.jsPDF("p", "mm", "a4");
+  pdf.addImage(sheetCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+  return pdf;
+}
+const fileName = () => {
+  const [y, m, d] = $("#fDate").value.split("-");
+  return `施工中場所火災預防宣導單_${$("#fName").value.trim().replace(/[\\/:*?"<>|\s]+/g, "_")}_${y - 1911}${m}${d}.pdf`;
+};
+$("#dl").addEventListener("click", () => {
+  try { buildPdf().save(fileName()); $("#dlNote").textContent = "已下載。沒有看到檔案的話，請改用 Safari 或 Chrome 開這個網頁，或按「分享 PDF」。"; }
+  catch (e) { alert("PDF 產生失敗，請再按一次。\n（" + e.message + "）"); }
+});
+// 手機可以直接把 PDF 分享到 LINE、雲端硬碟等
+const canShareFiles = () => { try { return !!navigator.canShare && navigator.canShare({ files: [new File([""], "a.pdf", { type: "application/pdf" })] }); } catch (e) { return false; } };
+$("#share").hidden = !canShareFiles();
+$("#share").addEventListener("click", async () => {
+  try { await navigator.share({ files: [new File([buildPdf().output("blob")], fileName(), { type: "application/pdf" })], title: "施工中場所火災預防宣導單" }); }
+  catch (e) { if (e.name !== "AbortError") alert("分享失敗，請改按「下載 PDF」。"); }
+});
+// 填下一張：清掉場所資料、場所人員簽名和場所章；宣導人員簽名和日期留著
+$("#again").addEventListener("click", () => {
+  ["fName", "fMaker", "fAddr", "fTitle"].forEach((id) => { $("#" + id).value = ""; });
+  pad2.clear(); stamp.raw = stamp.cut = ""; drawStamp(); sheetCanvas = null;
+  goStep(1);
+});
+
+goStep(1);
+</script>
+</body>
+</html>
