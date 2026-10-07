@@ -24,8 +24,8 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 14px 48px; }
 h2 { font-size: 19px; margin: 0 0 10px; color: var(--navy); }
 label { display: block; margin: 0 0 12px; font-weight: 700; }
 label span { font-weight: 400; color: var(--muted); font-size: 14px; }
-input[type="text"], input[type="date"] { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); min-height: 48px; }
-input:focus { outline: 3px solid #ffd966; border-color: var(--navy); }
+input[type="text"], input[type="date"], select { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); min-height: 48px; }
+input:focus, select:focus { outline: 3px solid #ffd966; border-color: var(--navy); }
 .row { display: flex; gap: 10px; margin-top: 4px; }
 button { font: inherit; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid var(--navy); background: var(--navy); color: #fff; cursor: pointer; flex: 1; }
 button.ghost { background: #fff; color: var(--navy); }
@@ -83,7 +83,7 @@ button:disabled { opacity: .5; }
 #sheet .sign .ack { background: var(--light); font-weight: 700; text-align: center; font-size: 15.5px; height: 34px; }
 #sheet .sign .big { height: 114px; padding: 0; }
 #sheet .cell { position: relative; height: 112px; }
-#sTitle { white-space: pre-line; }
+#sTeam { margin-left: 8px; }
 #sheet .cell img { position: absolute; }
 #sheet .cell .sig { left: 10px; top: 50%; transform: translateY(-50%); }
 #sheet .cell .stamp { right: 8px; top: 50%; transform: translateY(-50%); }
@@ -127,12 +127,15 @@ button:disabled { opacity: .5; }
   <section class="step" id="step3">
     <div class="card">
       <h2>宣導人員</h2>
+      <label>單位 <span>（第二大隊所屬分隊，這台裝置會記住）</span>
+        <select id="fTeam"></select>
+        <input type="text" id="fTeamOther" autocomplete="off" placeholder="請輸入單位名稱" hidden>
+      </label>
       <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="1" hidden>清除</button></div>
       <button class="ghost padbox" data-sign="1" aria-label="宣導人員簽名，點一下放大簽名"></button>
     </div>
     <div class="card">
       <h2>場所人員</h2>
-      <label>單位 <span>（可不填，預設帶入承造人／施工廠商）</span><input type="text" id="fUnit" autocomplete="off"></label>
       <label>職稱 <span>（可不填）</span><input type="text" id="fTitle" autocomplete="off"></label>
       <div class="sighead"><span>簽名</span><button class="ghost small" data-clear="2" hidden>清除</button></div>
       <button class="ghost padbox" data-sign="2" aria-label="場所人員簽名，點一下放大簽名"></button>
@@ -184,8 +187,8 @@ button:disabled { opacity: .5; }
     <table class="sign"><colgroup><col class="cs"><col><col class="cs"><col></colgroup>
       <tr><td colspan="4" class="ack">本場所已收到本宣導單，並瞭解上述火災預防事項。</td></tr>
       <tr>
-        <td class="lab">宣導單位</td><td style="height:46px">臺北市政府消防局<br>第二救災救護大隊</td>
-        <td class="lab">場所單位<br>職稱</td><td id="sTitle"></td>
+        <td class="lab">宣導單位</td><td style="height:46px">臺北市政府消防局<br>第二救災救護大隊<span id="sTeam"></span></td>
+        <td class="lab">場所人員<br>職稱</td><td id="sTitle"></td>
       </tr>
       <tr>
         <td class="lab">宣導人員<br>簽名</td>
@@ -222,7 +225,6 @@ $("#sRemind").innerHTML = `<b style="color:#c00000">提醒：</b>${esc(REMIND)}`
 function goStep(n) {
   document.querySelectorAll(".step").forEach((s) => s.classList.toggle("active", s.id === "step" + n));
   document.querySelectorAll(".steps li").forEach((l) => l.classList.toggle("on", l.dataset.s === String(n)));
-  if (n === 3 && !$("#fUnit").value.trim()) $("#fUnit").value = $("#fMaker").value.trim();   // 場所人員的單位通常就是施工廠商，先帶入，可以改
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => goStep(Number(b.dataset.go))));
@@ -237,6 +239,24 @@ $("#to2").addEventListener("click", () => {
 const todayTW = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
 $("#fDate").value = todayTW();
 const rocDate = (v) => { const [y, m, d] = v.split("-").map(Number); return `民國 ${y - 1911} 年 ${m} 月 ${d} 日`; };
+
+// ---- 宣導單位：第二大隊所屬單位，選過一次這台裝置會記住 ----
+const TEAMS = ["大安中隊", "信義中隊", "南港中隊", "金華分隊", "安和分隊", "莊敬分隊", "舊莊分隊"];
+const TEAM_KEY = "fireNoticeTeam", OTHER = "__other";
+$("#fTeam").innerHTML = `<option value="">請選擇</option>${TEAMS.map((t) => `<option>${t}</option>`).join("")}<option value="${OTHER}">其他（自行輸入）</option>`;
+const teamName = () => ($("#fTeam").value === OTHER ? $("#fTeamOther").value.trim() : $("#fTeam").value);
+function syncTeam() {
+  $("#fTeamOther").hidden = $("#fTeam").value !== OTHER;
+  try { localStorage.setItem(TEAM_KEY, teamName()); } catch (e) {}
+}
+try {
+  const saved = localStorage.getItem(TEAM_KEY) || "";
+  if (TEAMS.includes(saved)) $("#fTeam").value = saved;
+  else if (saved) { $("#fTeam").value = OTHER; $("#fTeamOther").value = saved; }
+} catch (e) {}
+$("#fTeam").addEventListener("change", () => { syncTeam(); if ($("#fTeam").value === OTHER) $("#fTeamOther").focus(); });
+$("#fTeamOther").addEventListener("input", syncTeam);
+syncTeam();
 
 // ---- 手寫簽名 ----
 function makePad(canvas, hint) {
@@ -383,7 +403,8 @@ async function fillSheet() {
   $("#sMaker").textContent = $("#fMaker").value.trim();
   $("#sAddr").textContent = $("#fAddr").value.trim();
   $("#sDate").textContent = $("#sDate2").textContent = rocDate($("#fDate").value);
-  $("#sTitle").textContent = [$("#fUnit").value.trim(), $("#fTitle").value.trim()].filter(Boolean).join("\n");
+  $("#sTitle").textContent = $("#fTitle").value.trim();
+  $("#sTeam").textContent = teamName();
   const s2 = sig[2], st = stampData();
   const both = !!(s2 && st);   // 簽名和章都有時各佔一半，只有一個時放大
   $("#sSiteCell").classList.toggle("solo", !both);
@@ -426,7 +447,7 @@ $("#share").addEventListener("click", async () => {
 });
 // 填下一張：清掉場所資料、場所人員簽名和場所章；宣導人員簽名和日期留著
 $("#again").addEventListener("click", () => {
-  ["fName", "fMaker", "fAddr", "fUnit", "fTitle"].forEach((id) => { $("#" + id).value = ""; });
+  ["fName", "fMaker", "fAddr", "fTitle"].forEach((id) => { $("#" + id).value = ""; });
   clearSig(2); stamp.raw = stamp.cut = ""; drawStamp(); sheetCanvas = null;
   goStep(1);
 });
