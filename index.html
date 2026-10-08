@@ -37,7 +37,8 @@ button:disabled { opacity: .5; }
 .point:first-of-type { border-top: none; }
 .point .no { width: 42px; height: 42px; border-radius: 50%; background: var(--red); color: #fff; font-size: 24px; font-weight: 700; display: grid; place-items: center; }
 .point h3 { margin: 4px 0 4px; font-size: 18px; }
-.point ul { margin: 0; padding-left: 1.2em; }
+.tick { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; margin: 0; padding: 7px 0; }
+.tick input { width: 24px; height: 24px; flex: none; margin: 1px 0 0; }
 .remind { background: var(--yellow); border-radius: 10px; padding: 10px 12px; font-size: 15px; }
 .remind b { color: var(--red); }
 .padbox { display: grid; place-items: center; width: 100%; height: 130px; min-height: 0; padding: 6px; border: 2px dashed var(--navy); border-radius: 10px; background: #fff; color: var(--navy); font-size: 16px; }
@@ -77,8 +78,9 @@ button:disabled { opacity: .5; }
 #sheet .points .pt { background: var(--yellow); text-align: center; width: 172px; font-weight: 700; font-size: 16.5px; line-height: 1.3; }
 #sheet .points .pt b { display: block; color: var(--red); font-size: 27px; line-height: 1.15; }
 #sheet .points ul { margin: 0; padding: 0; list-style: none; }
-#sheet .points li { position: relative; padding: 2.5px 0 2.5px 16px; font-size: 15.5px; line-height: 1.45; }
-#sheet .points li::before { content: ""; position: absolute; left: 2px; top: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--navy); }
+#sheet .points li { position: relative; padding: 2.5px 0 2.5px 21px; font-size: 15px; line-height: 1.45; letter-spacing: -0.2px; }
+#sheet .points .bx { position: absolute; left: 1px; top: 7px; width: 13px; height: 13px; border: 1.6px solid #111; box-sizing: border-box; }
+#sheet .points li.on .bx i { position: absolute; left: 3px; top: -3px; width: 4px; height: 10px; border: solid #111; border-width: 0 2.4px 2.4px 0; transform: rotate(45deg); }
 #sheet .remind { background: none; padding: 0; margin: 10px 0; font-size: 14.5px; border-radius: 0; }
 #sheet .sign .ack { background: var(--light); font-weight: 700; text-align: center; font-size: 15.5px; height: 34px; }
 #sheet .sign .big { height: 114px; padding: 0; }
@@ -117,7 +119,8 @@ button:disabled { opacity: .5; }
   <section class="step" id="step2">
     <div class="card">
       <h2>五項防火重點</h2>
-      <p class="note">請向場所人員說明下列事項。</p>
+      <p class="note">請向場所人員說明下列事項，說明過的打勾。沒勾的會在宣導單上留空格，印出來可以再用筆勾。</p>
+      <div class="row" style="margin:0 0 6px"><button class="ghost small" id="tickAll">全部勾選</button><button class="ghost small" id="tickNone">全部取消</button></div>
       <div id="pointList"></div>
     </div>
     <div class="remind" id="remindBox"></div>
@@ -209,16 +212,21 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 // 宣導內容：畫面上的第 2 步和 PDF 版面共用這一份
 const POINTS = [
   ["動火要監看", ["焊接、切割等動火作業，指定專人在旁監看，並備妥滅火器材。", "作業前移除或隔離周邊可燃物，必要時鋪設防焰帆布（墊）。", "視作業條件採取灑水、降溫等防止火花延燒措施；作業後確認沒有殘火。"]],
-  ["菸蒂要熄滅", ["作業區禁菸，規劃指定吸菸區及熄菸設施。", "菸蒂確實熄滅；垃圾、廢棄物及包裝材每日清理。"]],
+  ["嚴禁吸菸", ["施工場所內嚴禁吸菸。", "垃圾、廢棄物及包裝材每日清理。"]],
   ["可燃物遠離火源", ["油漆、溶劑、木材、包裝材等分類集中存放，並遠離火源。", "高壓氣體、瓦斯鋼瓶妥善存放、固定及管理。"]],
   ["收工巡查\n高風險區加強巡查", ["下班或停工前，確認火源、用電、機具及充電設備，清除遺留火種。", "地下室、管道間、屋頂、停車空間，以及夜間、無人時段加強巡查。", "安全梯、走廊、出口及消防搶救動線保持暢通。"]],
   ["鋰電池充電要管理", ["使用原廠或合格的電池及充電設備，設置專用且通風良好的充電區。", "充電區遠離可燃物、避免過度充電；充電期間有人看顧。", "電池膨脹、有異味、異常發熱或損壞時，立即停止使用。"]],
 ];
 const REMIND = "依法應辦理施工中消防防護計畫者，請完成提報或變更，並建立緊急通報、人員清點及初期滅火機制。火災請撥 119。";
 
-$("#pointList").innerHTML = POINTS.map(([t, items], i) => `<div class="point"><div class="no">${i + 1}</div><div><h3>${esc(t.replace("\n", "・"))}</h3><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`).join("");
+$("#pointList").innerHTML = POINTS.map(([t, items], i) => `<div class="point"><div class="no">${i + 1}</div><div><h3>${esc(t.replace("\n", "・"))}</h3>${items.map((x, j) => `<label class="tick"><input type="checkbox" data-tick="${i}-${j}"><span>${esc(x)}</span></label>`).join("")}</div></div>`).join("");
+const ticked = (i, j) => $(`[data-tick="${i}-${j}"]`).checked;
+const tickAll = (on) => document.querySelectorAll("[data-tick]").forEach((c) => { c.checked = on; });
+$("#tickAll").addEventListener("click", () => tickAll(true));
+$("#tickNone").addEventListener("click", () => tickAll(false));
 $("#remindBox").innerHTML = `<b>提醒：</b>${esc(REMIND)}`;
-$("#sPoints").innerHTML = POINTS.map(([t, items], i) => `<tr><td class="pt"><b>${i + 1}</b>${esc(t).replace("\n", "<br>")}</td><td><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></td></tr>`).join("");
+const drawPoints = () => { $("#sPoints").innerHTML = POINTS.map(([t, items], i) => `<tr><td class="pt"><b>${i + 1}</b>${esc(t).replace("\n", "<br>")}</td><td><ul>${items.map((x, j) => `<li${ticked(i, j) ? ' class="on"' : ""}><span class="bx"><i></i></span>${esc(x)}</li>`).join("")}</ul></td></tr>`).join(""); };
+drawPoints();
 $("#sRemind").innerHTML = `<b style="color:#c00000">提醒：</b>${esc(REMIND)}`;
 
 // ---- 步驟切換 ----
@@ -399,6 +407,7 @@ function place(el, src, maxW, maxH) {
   });
 }
 async function fillSheet() {
+  drawPoints();
   $("#sName").textContent = $("#fName").value.trim();
   $("#sMaker").textContent = $("#fMaker").value.trim();
   $("#sAddr").textContent = $("#fAddr").value.trim();
@@ -445,10 +454,11 @@ $("#share").addEventListener("click", async () => {
   try { await navigator.share({ files: [new File([buildPdf().output("blob")], fileName(), { type: "application/pdf" })], title: "施工中場所火災預防宣導單" }); }
   catch (e) { if (e.name !== "AbortError") alert("分享失敗，請改按「下載 PDF」。"); }
 });
-// 填下一張：清掉場所資料、場所人員簽名和場所章；宣導人員簽名和日期留著
+// 填下一張：清掉場所資料、勾選、場所人員簽名和場所章；宣導人員簽名和日期留著
 $("#again").addEventListener("click", () => {
   ["fName", "fMaker", "fAddr", "fTitle"].forEach((id) => { $("#" + id).value = ""; });
   clearSig(2); stamp.raw = stamp.cut = ""; drawStamp(); sheetCanvas = null;
+  tickAll(false);
   goStep(1);
 });
 
